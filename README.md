@@ -16,7 +16,7 @@ This is official **[PyTorch](https://pytorch.org/)** implementation of **[Toward
 
 ## Visualization
 
-![visualization](./figures/visualization.png)
+![visualization](https://github.com/wbstx/handAR/blob/main/figures/visualization.png?raw=true)
 
 I implement a opencv-based visualization program to overlap the reconstructed hand mesh over the user's hand in the image space. Just simply run `python mesh_demo.py` in the test_video folder.
 
