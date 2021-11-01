@@ -156,7 +156,6 @@ class FreiHAND(torch.utils.data.Dataset):
         if self.data_split == 'train':
             mask = load_img(mask_path)
             tex_mask = load_img(tex_mask_path)
-            # tex_mask = cv2.cvtColor(tex_mask, cv2.COLOR_BGR2RGB)
 
         origin_img = img.copy()
         # bbox = [0, 0, 224, 224]
@@ -237,21 +236,13 @@ class FreiHAND(torch.utils.data.Dataset):
             mano_joint_cam = np.dot(rot_aug_mat, mano_joint_cam.transpose(1,0)).transpose(1,0)
 
             mano_mesh_cam[:,2] = mano_mesh_cam[:,2] - root_joint_depth
-
-            # R, t = torch.from_numpy(np.array(cam_param['R'], dtype=np.float32).reshape(3,3)), torch.from_numpy(np.array(cam_param['t'], dtype=np.float32).reshape(3)) # camera rotation and translation
-            # inputs = {'img': img, 'origin_img': origin_img, 'cam_param': cam_param, 'R': R, 't': t, 'img_path': img_path}
             inputs = {'img': img, 'origin_img': origin_img, # 'cam_param': cam_param,
                       'img_path': img_path}
-
-            # targets = {'orig_joint_img': orig_joint_img, 'fit_joint_img': mano_joint_img, 'fit_mesh_img': mano_mesh_img, 'orig_joint_cam': orig_joint_cam, 'fit_joint_cam': mano_joint_cam, 'pose_param': mano_pose, 'shape_param': mano_shape,
-            #     'fit_mesh_cam': mano_mesh_cam, 'root_joint_depth': root_joint_depth, 'mask': mask, 'tex_mask': tex_mask, 'origin_mesh_img': origin_mesh_img}
+            
             targets = {'fit_joint_img': mano_joint_img, 'fit_mesh_img': mano_mesh_img, 'fit_joint_cam': mano_joint_cam,
                 'fit_mesh_cam': mano_mesh_cam, 'root_joint_depth': root_joint_depth, 'mask': mask, 'tex_mask': tex_mask,
                        'mano_param': mano_pose, 'mano_shape': mano_shape}
-
-            # meta_info = {'orig_joint_valid': orig_joint_valid, 'orig_joint_trunc': orig_joint_trunc, 'fit_joint_trunc': mano_joint_trunc, 'fit_mesh_trunc': mano_mesh_trunc, 'is_valid_fit': float(True), 'is_3D': float(True),
-            #     'bb2img_trans': bb2img_trans, 'img2bb_trans': img2bb_trans}
-
+            
             meta_info = {'fit_joint_trunc': mano_joint_trunc, 'fit_mesh_trunc': mano_mesh_trunc, 'is_valid_fit': float(True), 'is_3D': float(True),
                 'bb2img_trans': bb2img_trans, 'img2bb_trans': img2bb_trans, 'param': float(True), 'mask': float(True)}
         else:
@@ -271,8 +262,7 @@ class FreiHAND(torch.utils.data.Dataset):
             out = outs[n]
 
             # x,y: resize to input image space and perform bbox to image affine transform
-            mesh_out_img = out['mesh_coord_img']
-            # mesh_out_img = out['gcn']
+            mesh_out_img = out['gcn']
             mesh_out_img[:,0] = mesh_out_img[:,0] / cfg.output_hm_shape[2] * cfg.input_img_shape[1]
             mesh_out_img[:,1] = mesh_out_img[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
             mesh_out_img_xy1 = np.concatenate((mesh_out_img[:,:2], np.ones_like(mesh_out_img[:,:1])),1)
