@@ -62,11 +62,6 @@ class FreiHAND(torch.utils.data.Dataset):
             for i in range(len(annot)):
                 bbox_root_result[str(annot[i]['image_id'])] = {'bbox': np.array(annot[i]['bbox']), 'root': np.array(annot[i]['root_cam'])}
 
-        with open(osp.join(self.data_path, 'ensemble.json')) as f:
-            test_gt = json.load(f)
-            # 0 -> joint
-            # 1 -> mesh
-
         datalist = []
         for aid in db.anns.keys():
             ann = db.anns[aid]
@@ -180,6 +175,7 @@ class FreiHAND(torch.utils.data.Dataset):
             mask = np.round(mask)
 
         else:
+            # dummy mask / tex_mask
             img, mask, tex_mask, img2bb_trans, bb2img_trans, rot, _ = augmentation(img, img, img, bbox, self.data_split, exclude_flip=True) # FreiHAND dataset only contains right hands. do not perform flip aug.
 
             mask = cv2.resize(mask, (128, 128), cv2.INTER_NEAREST)
@@ -316,37 +312,3 @@ class FreiHAND(torch.utils.data.Dataset):
         with open(output_save_path, 'w') as f:
             json.dump([eval_result['joint_out'], eval_result['mesh_out']], f)
         print('Saved at ' + output_save_path)
-
-
-if __name__ == '__main__':
-    dataset = FreiHAND(transforms.ToTensor(), "train")
-    batch_generator = DataLoader(dataset=dataset, batch_size=1,
-                                 shuffle=False,
-                                 num_workers=30, pin_memory=True)
-
-    for itr, (inputs, targets, meta_info) in enumerate(batch_generator):
-        if itr < 10:
-            target = (inputs['img'][0] * 255).permute(1, 2, 0).cpu().numpy().astype(np.uint8)
-            # joints = (targets['fit_joint_img'])
-            # print(targets['fit_joint_cam'][0].cpu().numpy())
-
-            # print(joints)
-            #
-            # mask = (targets['mask'][0] * 255).permute(1, 2, 0).cpu().numpy().astype(np.uint8)
-            # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
-            # mask = cv2.resize(mask, (256, 256))
-            # mask = cv2.addWeighted(target, 0.5, mask, 0.5, 0)
-            #
-            target = cv2.cvtColor(target, cv2.COLOR_RGB2BGR)
-            # # from utils.vis import vis_mesh, save_obj, render_mesh, vis_normal
-            target1 = vis_mesh(target, targets['fit_mesh_img'][0].cpu().numpy() * 4)
-            # target2 = vis_keypoints(target, targets['fit_joint_img'][0].cpu().numpy() * 4)
-            # # target2 = vis_normal(target, targets['fit_mesh_img'][0].cpu().numpy() * 4, verts_normals[0, :, :].cpu().numpy())
-
-            save_obj(targets['fit_mesh_cam'][0].cpu().numpy(), dataset.mano.face, str(itr) + '.obj')
-
-            cv2.imwrite('t' + str(itr) + '.png', target1)
-            # cv2.imwrite('tt' + str(itr) + '.png', target2)
-            # cv2.imwrite('ttt' + str(itr) + '.png', mask)
-        else:
-            break
