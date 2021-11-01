@@ -104,9 +104,7 @@ class FreiHAND(torch.utils.data.Dataset):
                     'joint_cam': joint_cam,
                     'cam_param': cam_param,
                     'mano_param': mano_param,
-                    'root_joint_depth': root_joint_depth,
-                    'mesh_cam_out': mesh_cam_out,
-                    'joint_cam_out': joint_cam_out})
+                    'root_joint_depth': root_joint_depth})
 
         return datalist
 
