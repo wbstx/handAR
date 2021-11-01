@@ -176,17 +176,6 @@ class HeatmapNet(nn.Module):
 
         return heatmap, joint_coord
 
-# Stage Render
-# class Pose2Feat(nn.Module):
-#     def __init__(self, joint_num):
-#         super(Pose2Feat, self).__init__()
-#         self.joint_num = joint_num
-#         self.conv = make_conv_layers([64+joint_num, 64], kernel=1, stride=1, padding=0, bnrelu_final=True)
-#
-#     def forward(self, pos_feat):
-#         feat = self.conv(pos_feat)
-#         return feat
-
 # Stage Lixel
 class Pose2Feat(nn.Module):
     def __init__(self, joint_num):
@@ -208,21 +197,6 @@ class MeshNet(nn.Module):
         super(MeshNet, self).__init__()
         self.vertex_num = vertex_num
         self.deconv = make_deconv_layers([2048,256,256,256])
-
-        # self.conv1 = nn.Conv2d(2048, 1024, 1, stride=1, padding=0)
-        # self.fusion1 = nn.Conv2d(1024, 1024, 3, stride=1, padding=1)
-        # self.bn1 = nn.BatchNorm2d(1024)
-        #
-        # self.conv2 = nn.Conv2d(1024, 512, 1, stride=1, padding=0)
-        # self.fusion2 = nn.Conv2d(512, 512, 3, stride=1, padding=1)
-        # self.bn2 = nn.BatchNorm2d(512)
-        #
-        # self.conv3 = nn.Conv2d(512, 256, 1, stride=1, padding=0)
-        # self.fusion3 = nn.Conv2d(256, 256, 3, stride=1, padding=1)
-        # self.bn3 = nn.BatchNorm2d(256)
-        #
-        # self.conv4 = nn.Conv2d(256, 512, 1, stride=1, padding=0)
-        # self.se_block = SEBlock(512)
 
         self.conv_x = make_conv1d_layers([256,self.vertex_num], kernel=1, stride=1, padding=0, bnrelu_final=False)
         self.conv_y = make_conv1d_layers([256,self.vertex_num], kernel=1, stride=1, padding=0, bnrelu_final=False)
@@ -251,27 +225,6 @@ class MeshNet(nn.Module):
     def forward(self, img_feat, feats=None):
         img_feat_xy = self.deconv(img_feat)
 
-        # x = nn.functional.interpolate(img_feat, scale_factor=2, mode='bilinear')
-        # x = self.conv1(x) # 16 x 16
-        # x = self.fusion1(x + feats[-1])
-        # x = F.relu(self.bn1(x))
-        #
-        # x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear')
-        # x = self.conv2(x) # 32 x 32
-        # x = self.fusion2(x + feats[-2])
-        # x = F.relu(self.bn2(x))
-        #
-        # x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear')
-        # x = self.conv3(x) # 64 x 64
-        # x = self.fusion3(x + feats[-3])
-        # x = F.relu(self.bn3(x))
-        #
-        # x = nn.functional.interpolate(x, scale_factor=2, mode='bilinear')
-        # x = self.conv4(x) # 128 x 128
-        # x = self.se_block(x)
-        #
-        # img_feat_xy = x
-
         # x axis
         img_feat_x = img_feat_xy.mean((2))
         heatmap_x = self.conv_x(img_feat_x)
@@ -296,12 +249,9 @@ class ParamRegressor(nn.Module):
     def __init__(self, joint_num):
         super(ParamRegressor, self).__init__()
         self.joint_num = joint_num
-        # self.fc = make_linear_layers([self.joint_num*3, 1024, 512], use_bn=True)
         self.fc = make_linear_layers([778*3, 1024, 512], use_bn=True)
-        # if 'FreiHAND' in cfg.trainset_3d:
+        
         self.fc_pose = make_linear_layers([512, 16*6], relu_final=False) # hand joint orientation
-        # else:
-        #     self.fc_pose = make_linear_layers([512, 24*6], relu_final=False) # body joint orientation
         self.fc_shape = make_linear_layers([512, 10], relu_final=False) # shape parameter
 
     def rot6d_to_rotmat(self,x):
@@ -390,29 +340,11 @@ class GraphResConv(torch.nn.Module):
 class GCN(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim=128, output_dim=3, drop_edge=False):
         super(GCN, self).__init__()
-        # self.conv1 = SAGEConv(input_dim, 32)
-        # self.conv2 = SAGEConv(32, 32)
-        # self.conv3 = SAGEConv(32, output_dim)
-
-        # self.conv1 = GraphConv(input_dim, 256, hidden_dim)
-        # self.conv2 = GraphConv(hidden_dim, hidden_dim, hidden_dim)
-        # self.conv3 = GraphConv(hidden_dim, hidden_dim, output_dim, relu_bn=False)
-        # self.lin = nn.Linear(hidden_dim, 64)
-        # self.bn = nn.BatchNorm1d(64)
-        # self.tail = nn.Linear(64, output_dim)
-
-        # self.jk = JumpingKnowledge(mode='lstm', channels=128, num_layers=3)
-        # nn2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, 64))
-        # self.conv2 = GINConv(nn2)
-        #
-        # nn3 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, output_dim))
-        # self.conv3 = GINConv(nn3)
 
         self.head = GraphConv(input_dim, 256, hidden_dim)
         self.res1 = GraphResConv(hidden_dim)
         self.res2 = GraphResConv(hidden_dim)
         self.res3 = GraphResConv(hidden_dim)
-        # self.res4 = GraphResConv(hidden_dim)
         self.tail = GraphConv(hidden_dim, 32, output_dim, relu_bn=False)
 
         self.drop_edge = drop_edge
@@ -420,40 +352,21 @@ class GCN(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        # self.conv1.reset_parameters()
-        # self.conv2.reset_parameters()
-        # self.conv3.reset_parameters()
-        # self.lin.reset_parameters()
-        # self.bn.reset_parameters()
-        # self.tail.reset_parameters()
-        # self.jk.reset_parameters()
         self.head.reset_parameters()
         self.res1.reset_parameters()
         self.res2.reset_parameters()
         self.res3.reset_parameters()
-        # self.res4.reset_parameters()
         self.tail.reset_parameters()
 
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        # if self.drop_edge:
-        #     edge_index, _ = dropout_adj(edge_index, p=0.5)
-
-        # out = self.conv1(x, edge_index)
-        # out = self.conv2(out, edge_index)
-        # out = self.conv3(out, edge_index)
 
         out = self.head(x, edge_index)
         out = self.res1(out, edge_index)
         out = self.res2(out, edge_index)
         out = self.res3(out, edge_index)
-        # out = self.res4(out, edge_index)
         out = self.tail(out, edge_index)
-
-        # x1 = F.relu(self.conv1(x, edge_index))
-        # x2 = F.relu(self.conv2(x1, edge_index))
-        # x_gcn = self.conv3(x2, edge_index)
 
         return out
 
@@ -507,11 +420,6 @@ class UpdateBlock(nn.Module):
         super(UpdateBlock, self).__init__()
         self.gru = GCNGRU(hidden_dim=hidden_dim, input_dim=input_dim)
         self.head = GCN(input_dim=hidden_dim, output_dim=3, drop_edge=False)
-
-        # self.mask = nn.Sequential(
-        #     nn.Conv2d(128, 256, 3, padding=1),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(256, 16*9, 1, padding=0))
 
     def forward(self, B, hidden):
 
