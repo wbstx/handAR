@@ -35,7 +35,6 @@ def main():
     args = parse_args()
     cfg.set_args(args.gpu_ids, args.stage, False, args.rnn)
     cudnn.benchmark = True
-    print('Stage: ' + args.stage)
 
     tester = Tester(args.test_epoch)
     tester._make_batch_generator(args)
