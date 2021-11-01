@@ -86,9 +86,6 @@ class FreiHAND(torch.utils.data.Dataset):
                 bbox = bbox_root_result[str(image_id)]['bbox'] # bbox should be aspect ratio preserved-extended. It is done in RootNet.
                 root_joint_depth = bbox_root_result[str(image_id)]['root'][2]
 
-                mesh_cam_out = test_gt[1][int(db_idx)]
-                joint_cam_out = test_gt[0][int(db_idx)]
-
 
             if self.data_split == 'train':
                 datalist.append({
