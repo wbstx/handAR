@@ -20,9 +20,7 @@ from utils.preprocessing import process_bbox, generate_patch_image
 from utils.transforms import pixel2cam, cam2pixel
 from utils.mano import MANO
 
-# sys.path.insert(0, cfg.smpl_path)
 sys.path.insert(0, cfg.mano_path)
-# from smplpytorch.pytorch.smpl_layer import SMPL_Layer
 from utils.manopth.manopth.manolayer import ManoLayer
 from utils.vis import vis_mesh, save_obj, vis_keypoints_with_skeleton
 from canvas import Canvas
@@ -201,13 +199,6 @@ for kkk in range(0, 100):
 		frame = frame[int((h - w) / 2):int((h + w) / 2), :]
 	frame = cv2.resize(frame, (320, 320))
 
-	pil_hand_frame = opencv2pil(frame)
-
-	pil_hand_frame = PIL.ImageEnhance.Brightness(pil_hand_frame).enhance(brightness)
-	pil_hand_frame = PIL.ImageEnhance.Color(pil_hand_frame).enhance(contrast)
-
-	frame = pil2opencv(pil_hand_frame)
-
 	original_img = frame
 	original_img_height, original_img_width = original_img.shape[:2]
 
@@ -225,8 +216,6 @@ for kkk in range(0, 100):
 
 	with torch.no_grad():
 		out = model(inputs, targets, meta_info, 'test')
-
-
 
 	img = img[0].cpu().numpy().transpose(1, 2, 0)  # cfg.input_img_shape[1], cfg.input_img_shape[0], 3
 	if origin:
@@ -278,10 +267,7 @@ for kkk in range(0, 100):
 	for i in range(778):
 		old2new_coord[old2new_matching[i]] = homo_coord[i]
 
-	# mapped_coord = np.zeros((c.mapping.shape[0], 4))
-	# mapped_coord = np.zeros((958, 4))
 	mapped_coord = np.zeros((c.mapping.shape[0], 4))
-	# mapped_coord = np.zeros((778, 4))
 
 	for i in range(mapped_coord.shape[0]):
 		mapped_coord[i] = old2new_coord[int(c.mapping[i]) - 1]
