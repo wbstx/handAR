@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from nets.resnet import ResNetBackbone
-from nets.module_no_render import PoseNet, Pose2Feat, MeshNet, ParamRegressor, HeatmapNet, GCN, UpdateBlock, SegmentationNet, SEBlock
+from nets.module_no_render import PoseNet, Pose2Feat, MeshNet, ParamRegressor, HeatmapNet, GCN, UpdateBlock, SegmentationNet
 from nets.loss import CoordLoss, ParamLoss, NormalVectorLoss, EdgeLengthLoss, SequenceLoss, SequenceNormalLoss, SequenceEdgeLoss
 from utils.smpl import SMPL
 from utils.mano import MANO
@@ -42,9 +42,6 @@ class Model(nn.Module):
 		self.segmentation_net = SegmentationNet()
 		self.segmentation_net.apply(init_weights)
 
-		self.global_block_pose = SEBlock(2048)
-		self.global_block_mesh = SEBlock(2048)
-
 		self.global_img_feat = nn.Sequential(
 			make_conv1d_layers([2048, 512], kernel=1, stride=1, padding=0, bnrelu_final=False)
 		)
@@ -53,12 +50,9 @@ class Model(nn.Module):
 
 		self.batch_size = cfg.train_batch_size
 
-		if 'FreiHAND' in cfg.trainset_3d + cfg.trainset_2d + [cfg.testset]:
-			self.human_model = MANO()
-			self.human_model_layer = self.human_model.layer.to(torch.cuda.current_device())
-		else:
-			self.human_model = SMPL()
-			self.human_model_layer = self.human_model.layer['neutral'].to(torch.cuda.current_device())
+		self.human_model = MANO()
+		self.human_model_layer = self.human_model.layer.to(torch.cuda.current_device())
+
 		self.root_joint_idx = self.human_model.root_joint_idx
 
 		self.joint_regressor = self.human_model.joint_regressor
@@ -73,17 +67,6 @@ class Model(nn.Module):
 		self.pose_skeleton = self.pose_skeleton.long()
 		self.face = self.human_model_layer.th_faces.permute(1, 0).to(torch.cuda.current_device())
 		self.face2edge = FaceToEdge()
-
-	def make_gaussian_heatmap(self, joint_coord_img):
-		x = torch.arange(cfg.output_hm_shape[2])
-		y = torch.arange(cfg.output_hm_shape[1])
-		z = torch.arange(cfg.output_hm_shape[0])
-		zz,yy,xx = torch.meshgrid(z,y,x)
-		xx = xx[None,None,:,:,:].cuda().float(); yy = yy[None,None,:,:,:].cuda().float(); zz = zz[None,None,:,:,:].cuda().float();
-
-		x = joint_coord_img[:,:,0,None,None,None]; y = joint_coord_img[:,:,1,None,None,None]; z = joint_coord_img[:,:,2,None,None,None];
-		heatmap = torch.exp(-(((xx-x)/cfg.sigma)**2)/2 -(((yy-y)/cfg.sigma)**2)/2 - (((zz-z)/cfg.sigma)**2)/2)
-		return heatmap
 
 	def project(self, img_feat, vertices, img_size):
 		v = vertices[:, :, :2]
@@ -103,8 +86,7 @@ class Model(nn.Module):
 		#############################
 		# Stage: mesh
 		#############################
-
-		# meshnet forward
+		
 		_, mesh_img_feat, mesh_feats = self.mesh_backbone(joint_feat+shared_img_feat, skip_early=True)
 		global_img_feat = self.global_img_feat(mesh_img_feat.mean((2,3))[:,:,None])
 		global_img_feat = global_img_feat.permute(0, 2, 1).repeat(1, 778, 1)
@@ -134,9 +116,6 @@ class Model(nn.Module):
 		B.x = torch.cat((B.x, cat_feat), dim=1)
 		x = self.gcn(B).view(-1, 778, 3)
 		x = x + rough_mesh
-		#
-		# gcn_pose = torch.bmm(
-		# 	torch.from_numpy(self.joint_regressor).cuda()[None, :, :].repeat(x.shape[0], 1, 1), x)
 
 		# test output
 		out = {}
